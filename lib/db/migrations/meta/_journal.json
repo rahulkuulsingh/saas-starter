@@ -8,6 +8,20 @@
       "when": 1726443359662,
       "tag": "0000_soft_the_anarchist",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1756194014805,
+      "tag": "0001_lethal_rattler",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1756195459278,
+      "tag": "0002_right_scalphunter",
+      "breakpoints": true
     }
   ]
 }

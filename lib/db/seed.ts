@@ -1,84 +1,129 @@
-import { stripe } from '../payments/stripe';
 import { db } from './drizzle';
-import { users, teams, teamMembers } from './schema';
-import { hashPassword } from '@/lib/auth/session';
+import { eq, or } from 'drizzle-orm'; 
+import { 
+  users, 
+  categories, 
+  products, 
+  productImages,
+  NewUser,
+  NewCategory, 
+  NewProduct,
+  NewProductImage
+} from './schema';
+import bcrypt from 'bcryptjs';
 
-async function createStripeProducts() {
-  console.log('Creating Stripe products and prices...');
+export async function seedEcommerceData() {
+  try {
+    console.log('🌱 Seeding e-commerce data...');
 
-  const baseProduct = await stripe.products.create({
-    name: 'Base',
-    description: 'Base subscription plan',
-  });
+    // Create admin user
+    const hashedPassword = await bcrypt.hash('admin123', 10);
+    const adminUser: NewUser = {
+      name: 'Admin User',
+      email: 'admin@industrialsupplies.com',
+      passwordHash: hashedPassword,
+      role: 'admin',
+      phone: '555-0123',
+      address: '123 Industrial Way',
+      city: 'Chicago',
+      state: 'IL',
+      zipCode: '60601',
+      country: 'US',
+    };
 
-  await stripe.prices.create({
-    product: baseProduct.id,
-    unit_amount: 800, // $8 in cents
-    currency: 'usd',
-    recurring: {
-      interval: 'month',
-      trial_period_days: 7,
-    },
-  });
+    // Use onConflictDoNothing to prevent duplicate user creation
+    await db.insert(users).values(adminUser)
+      .onConflictDoNothing({ target: users.email });
+    console.log('✅ Admin user created (or already exists):', adminUser.email);
 
-  const plusProduct = await stripe.products.create({
-    name: 'Plus',
-    description: 'Plus subscription plan',
-  });
 
-  await stripe.prices.create({
-    product: plusProduct.id,
-    unit_amount: 1200, // $12 in cents
-    currency: 'usd',
-    recurring: {
-      interval: 'month',
-      trial_period_days: 7,
-    },
-  });
+    // Create test customer
+    const customerPassword = await bcrypt.hash('customer123', 10);
+    const testCustomer: NewUser = {
+      name: 'John Contractor',
+      email: 'john@contractor.com',
+      passwordHash: customerPassword,
+      role: 'customer',
+      phone: '555-0456',
+      address: '456 Building St',
+      city: 'Detroit',
+      state: 'MI',
+      zipCode: '48201',
+      country: 'US',
+    };
 
-  console.log('Stripe products and prices created successfully.');
-}
+    await db.insert(users).values(testCustomer)
+      .onConflictDoNothing({ target: users.email });
+    console.log('✅ Test customer created (or already exists):', testCustomer.email);
 
-async function seed() {
-  const email = 'test@test.com';
-  const password = 'admin123';
-  const passwordHash = await hashPassword(password);
 
-  const [user] = await db
-    .insert(users)
-    .values([
+    // Create categories
+    const categoryData: NewCategory[] = [
       {
-        email: email,
-        passwordHash: passwordHash,
-        role: "owner",
+        name: 'Fasteners',
+        slug: 'fasteners',
+        description: 'All types of fasteners including screws, bolts, and nuts',
+        sortOrder: 1,
       },
-    ])
-    .returning();
+      {
+        name: 'Screws',
+        slug: 'screws',
+        description: 'Machine screws, wood screws, self-tapping screws',
+        sortOrder: 1,
+      },
+      {
+        name: 'Bolts',
+        slug: 'bolts',
+        description: 'Hex bolts, carriage bolts, eye bolts',
+        sortOrder: 2,
+      },
+      {
+        name: 'Nuts',
+        slug: 'nuts',
+        description: 'Hex nuts, lock nuts, wing nuts',
+        sortOrder: 3,
+      },
+      {
+        name: 'Washers',
+        slug: 'washers',
+        description: 'Flat washers, lock washers, fender washers',
+        sortOrder: 4,
+      },
+      {
+        name: 'Anchors',
+        slug: 'anchors',
+        description: 'Wall anchors, concrete anchors, toggle bolts',
+        sortOrder: 5,
+      }
+    ];
 
-  console.log('Initial user created.');
+    // Use onConflictDoNothing to prevent duplicate category creation
+    await db.insert(categories).values(categoryData)
+      .onConflictDoNothing({ target: categories.slug });
+    
+    // You'll need to re-query to get the IDs for relationships
+    const insertedCategories = await db.query.categories.findMany();
+    
+    console.log(`✅ Created ${insertedCategories.length} categories`);
 
-  const [team] = await db
-    .insert(teams)
-    .values({
-      name: 'Test Team',
-    })
-    .returning();
+    // The rest of your script should work once the above is fixed.
 
-  await db.insert(teamMembers).values({
-    teamId: team.id,
-    userId: user.id,
-    role: 'owner',
-  });
-
-  await createStripeProducts();
+  } catch (error) {
+    console.error('❌ Error seeding e-commerce data:', error);
+    throw error;
+  }
 }
 
-seed()
-  .catch((error) => {
-    console.error('Seed process failed:', error);
-    process.exit(1);
-  })
-  .finally(() => {
-    console.log('Seed process finished. Exiting...');
-    process.exit(0);
-  });
+
+// Run if called directly
+if (require.main === module) {
+  seedEcommerceData()
+    .then(() => {
+      console.log('✅ Seeding completed');
+      process.exit(0);
+    })
+    .catch((error) => {
+      console.error('❌ Seeding failed:', error);
+      process.exit(1);
+    });
+}

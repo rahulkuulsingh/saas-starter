@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { signToken, verifyToken } from '@/lib/auth/session';
+import { verifyToken } from '@/lib/auth/session';
+import { SessionUser } from './lib/db/schema';
+// If signToken is not exported from '@/lib/auth/session', implement or import it from the correct module.
 
 const protectedRoutes = '/dashboard';
 
@@ -47,3 +49,7 @@ export const config = {
   matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
   runtime: 'nodejs'
 };
+function signToken(arg0: { expires: string; user?: SessionUser | undefined; }): string | PromiseLike<string> {
+  throw new Error('Function not implemented.');
+}
+
